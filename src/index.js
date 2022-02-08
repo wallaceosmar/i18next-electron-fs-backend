@@ -6,7 +6,6 @@ import {
     mergeNested,
     groupByArray
 } from "./utils";
-const path = require("path");
 
 // CONFIGS
 const defaultOptions = {
@@ -14,6 +13,9 @@ const defaultOptions = {
     loadPath: "/locales/{{lng}}/{{ns}}.json", // Where the translation files get loaded from
     addPath: "/locales/{{lng}}/{{ns}}.missing.json" // Where the missing translation files get generated
 };
+const defaultMainBindingOptions = {
+    addPath: './'
+}
 // Electron-specific; must match mainIpc
 export const readFileRequest = "ReadFile-Request";
 export const writeFileRequest = "WriteFile-Request";
@@ -23,7 +25,7 @@ export const changeLanguageRequest = "ChangeLanguage-Request";
 
 // This is the code that will go into the preload.js file
 // in order to set up the contextBridge api
-export const preloadBindings = function (ipcRenderer, process) {
+export const preloadBindings = function (ipcRenderer, process, path) {
     return {
         send: (channel, data) => {
             const validChannels = [readFileRequest, writeFileRequest];
@@ -53,7 +55,8 @@ export const preloadBindings = function (ipcRenderer, process) {
 
 // This is the code that will go into the main.js file
 // in order to set up the ipc main bindings
-export const mainBindings = function (ipcMain, browserWindow, fs) {
+export const mainBindings = function (ipcMain, browserWindow, fs, path, options = {}) {
+    options = Object.assign(options, defaultMainBindingOptions);
     ipcMain.on(readFileRequest, (IpcMainEvent, args) => {
         const callback = function (error, data) {
             this.webContents.send(readFileResponse, {
@@ -62,7 +65,7 @@ export const mainBindings = function (ipcMain, browserWindow, fs) {
                 data: typeof data !== "undefined" && data !== null ? data.toString() : ""
             });
         }.bind(browserWindow);
-        fs.readFile(args.filename, "utf8", callback);
+        fs.readFile(path.join(options.absPath, args.filename), "utf8", callback);
     });
 
     ipcMain.on(writeFileRequest, (IpcMainEvent, args) => {
@@ -78,7 +81,7 @@ export const mainBindings = function (ipcMain, browserWindow, fs) {
         let separator = "/";
         const windowsSeparator = "\\";
         if (args.filename.includes(windowsSeparator)) separator = windowsSeparator;
-        const root = args.filename.slice(0, args.filename.lastIndexOf(separator));
+        const root = path.join(options.absPath, args.filename.slice(0, args.filename.lastIndexOf(separator)));
 
         fs.mkdir(root, {
             recursive: true
@@ -86,7 +89,7 @@ export const mainBindings = function (ipcMain, browserWindow, fs) {
             if (error){
                 console.error(error);
             }
-            fs.writeFile(args.filename, JSON.stringify(args.data), callback);
+            fs.writeFile(path.join(options.absPath, args.filename), JSON.stringify(args.data), callback);
         });
     });
 };

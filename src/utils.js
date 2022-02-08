@@ -1,4 +1,4 @@
-const merge = require("lodash.merge");
+import { merge } from "lodash";
 
 /**
  * Fast UUID generator, RFC4122 version 4 compliant.

@@ -1,4 +1,5 @@
 # i18next-electron-fs-backend
+* This is a fork of i18next-node-fs-backend 
 This is an i18next library designed to work with [secure-electron-template](https://github.com/reZach/secure-electron-template). The library is a rough copy of [i18next-node-fs-backend](https://github.com/i18next/i18next-node-fs-backend) but using IPC (inter-process-communication) to request a file be read or written from the electron's [main process](https://electronjs.org/docs/api/ipc-main). The translation files that are written are written synchronously, but this should not be a problem because you should be creating translation files in development only (translation files should already exist before deploying to production environments).
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=reZach_i18next-electron-fs-backend&metric=alert_status)](https://sonarcloud.io/dashboard?id=reZach_i18next-electron-fs-backend)
@@ -10,7 +11,7 @@ This is an i18next library designed to work with [secure-electron-template](http
 ## How to install
 
 ### Install the package
-`npm i i18next-electron-fs-backend`
+`npm i @wallaceosmar/i18next-electron-fs-backend`
 
 ### Add into your i18next config
 Based on documentation for a [i18next config](https://www.i18next.com/how-to/add-or-load-translations#load-using-a-backend-plugin), import the backend.
@@ -19,7 +20,7 @@ import i18n from "i18next";
 import {
   initReactI18next
 } from "react-i18next";
-import backend from "i18next-electron-fs-backend";
+import backend from "@wallaceosmar/i18next-electron-fs-backend";
 
 i18n
   .use(backend)
@@ -47,16 +48,26 @@ const {
     contextBridge,
     ipcRenderer
 } = require("electron");
-const backend = require("i18next-electron-fs-backend");
+const path = require('path');
+const backend = require("@wallaceosmar/i18next-electron-fs-backend");
 
 contextBridge.exposeInMainWorld(
     "api", {
-        i18nextElectronBackend: backend.preloadBindings(ipcRenderer, process)
+        i18nextElectronBackend: backend.preloadBindings(ipcRenderer, process, path)
     }
 );
 ```
 
 ### Update your main.js script
+
+In the mainBindings function you have the following parameters:
+- ipcMain
+- win: the BrowserWindow
+- fs: the file system
+- path: the path module
+- options: the options object(optional)
+ - absPath: the absolute path to the translation files
+
 ```javascript
 const {
   app,
@@ -64,7 +75,8 @@ const {
   session,
   ipcMain
 } = require("electron");
-const backend = require("i18next-electron-fs-backend");
+const path = require('path');
+const backend = require("@wallaceosmar/i18next-electron-fs-backend");
 const fs = require("fs");
 
 let win;
@@ -79,7 +91,8 @@ async function createWindow() {
     }
   });
 
-  backend.mainBindings(ipcMain, win, fs); // <- configures the backend
+  const options = { absPath: './' };
+  backend.mainBindings(ipcMain, win, fs, path, options); // <- configures the backend
   
   // ...
 }
